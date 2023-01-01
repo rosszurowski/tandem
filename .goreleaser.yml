@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+project_name: tandem
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      # - windows
+      - darwin
+
+archives:
+  - format: tar.gz
+    # We use the default name_template and install.sh looks out for them.
+    # If you change it, update install.sh too.
+    # name_template:
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
+
+brews:
+  - tap:
+      owner: rosszurowski
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: GoReleaser
+    commit_msg_template: "Formula: {{ .ProjectName }} v{{ .Tag }}"
+    homepage: "https://github.com/rosszurowski/tandem"
+    description: "tandem runs commands in parallel, treating them as a group."
+    folder: Formula
+    license: "MIT"
+
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc

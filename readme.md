@@ -15,6 +15,8 @@
 - Supports running npm scripts and binaries.
 - Shows labels for each command, to help keep track of interleaved output.
 
+## Demo
+
 ![A demo of using the tandem CLI](.github/demo.gif)
 
 ## Installation

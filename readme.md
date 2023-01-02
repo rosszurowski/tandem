@@ -1,18 +1,18 @@
-# tandem
+<div align="center">
+  <img src=".github/cover.svg" width="400" alt="tandem — a fast and small parallel task runner (logo by Hannah Lee)" />
+</div>
 
-`tandem` is a parallel task runner. It's designed to help run multiple dev servers or watchers at once, and properly shut them down afterwards. For example using [tailwindcss](https://tailwindcss.com) and [esbuild](https://esbuild.github.io), or [Next.js](https://nextjs.org) and an API server.
+<br />
 
-```shell
-tandem 'command1 "arg"' 'command2 "arg"' 'command3 "arg"'
-```
+<div align="center">
+  <b>tandem</b> is a parallel task runner, meant to run concurrent dev<br /> servers that exit cleanly. Pairs great with Makefiles!<br>
+</div>
 
+## Features
 
-
-#### Features
-
-- Fast, single, static binary.
+- Small, fast, static binary.
 - Cleanly shuts down each command if one fails! No more processes clinging to ports.
-- Supports running npm scripts with `npm:` shortcut.
+- Supports running npm scripts and binaries.
 - Shows labels for each command, to help keep track of interleaved output.
 
 ## Installation
@@ -29,21 +29,15 @@ If you have Go installed, you can install from the source with:
 go install github.com/rosszurowski/tandem@latest
 ```
 
-In a Makefile, use this snippet to fetch a local copy for your project. Change the `.cache` path as needed, and add it to your `.gitignore`.
-
-```makefile
-dev: node_modules .cache/tandem
-	@.cache/tandem 'command1' 'command2'
-.PHONY: dev
-
-.cache/tandem:
-	@mkdir -p $$(dirname $@)
-	@curl -fsSL https://raw.githubusercontent.com/rosszurowski/tandem/main/install.sh | bash -s -- --dest="$$(dirname $@)"
-```
+If you're using tandem from a Makefile, [this snippet](#using-in-makefiles) shows how to download a locally cached copy.
 
 ## Usage
 
-tandem is designed to solve [running parallel dev servers from Makefiles](https://rosszurowski.com/log/2022/makefiles#parallel-dev-servers).
+Use tandem by passing a set of commands to run in parallel. Wrap each command in quotes, like so:
+
+```shell
+tandem 'command1 "arg"' 'command2 "arg"' 'command3 "arg"'
+```
 
 ### Running a front-end and a backend at once
 
@@ -77,16 +71,34 @@ $ tandem 'npm:dev:php' 'npm:dev:js' 'npm:dev:css'
 
 Support for npm wildcards like `tandem 'npm:dev:*'` is tracked in https://github.com/rosszurowski/tandem/issues/2
 
+### Using in Makefiles
+
+In a Makefile, use this snippet to fetch a local copy for your project. Change the `.cache` path as needed, and add it to your `.gitignore`.
+
+```makefile
+dev: node_modules .cache/tandem
+	@.cache/tandem 'command1' 'command2'
+.PHONY: dev
+
+.cache/tandem:
+	@mkdir -p $$(dirname $@)
+	@curl -fsSL https://raw.githubusercontent.com/rosszurowski/tandem/main/install.sh | bash -s -- --dest="$$(dirname $@)"
+```
+
+Running `make dev` will download tandem once, and then use it for every run from there on out.
+
 ## Motivation
 
 I regularly use Makefiles to automate project commands and tools. Makefiles are mostly great! But their biggest failing (also a failing of shells generally) is that it's shockingly hard to coordinate multiple commands as one group:
 
 - `make -jN <a> <b> <c>` doesn't end all tasks when another one fails. For running local dev servers, this means you can lose your CSS or JS watcher and not realize.
 - `command1 & command2 & wait` often leaves commands hanging around in the background, which is annoying when it eats up a port you want to use.
-- Tools like GNU parallel have an annoying syntax, and I've never been able to figure out how to stop all tasks when one fails.
+- Tools like GNU parallel have a confusing syntax, and I've never been able to figure out how to stop all tasks when one fails.
 
 tandem makes running concurrent servers easy. It takes inspiration from [concurrently](https://www.npmjs.com/package/concurrently) or [npm-run-all](https://www.npmjs.com/package/npm-run-all), but improves performance and works as a static binary.
 
 ## Acknowledgements
 
-tandem owes a big thanks to [hivemind](https://github.com/DarthSim/hivemind), from which much of the source is drawn. tandem can be thought of as a fork of hivemind, but rather than defining commands in a Procfile, defining them from a list of arguments.
+tandem owes a big thanks to [hivemind](https://github.com/DarthSim/hivemind), from which much of the source is drawn. `tandem` can be thought of as a fork of hivemind, but rather than defining commands in a Procfile, defining them from a list of arguments.
+
+tandem's illustration was drawn by [Hannah Lee](https://hannahlee.ca/).

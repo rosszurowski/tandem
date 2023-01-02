@@ -81,14 +81,14 @@ main() {
 
   latest_version=$(
     echo "$asset_uri" |
-    grep -o "download/v[^_]*" |
-    grep -o "v[^_/]*" |
+    grep -o "download/[^_]*" |
+    grep -o "[[:digit:]][^/]*" |
     head -n 1
   )
   tmp_dir="$(mktemp -d)"
   tmp_file="${tmp_dir}/${bin_name}.tmp.tar.gz"
 
-  echo "Downloading ${bin_name} ${latest_version} from GitHub..."
+  echo "Downloading ${bin_name} v${latest_version} from GitHub..."
   curl -fsSL "$asset_uri" -o "${tmp_file}"
   if [ -n "${destination}" ]; then
     mkdir -p "${destination}"
@@ -98,7 +98,7 @@ main() {
   fi
   rm -f "${tmp_file}"
 
-  echo "Installed ${bin_name} ${latest_version} to ${destination}"
+  echo "Installed ${bin_name} v${latest_version} to ${destination}"
 }
 
 main "$@"

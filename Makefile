@@ -5,6 +5,7 @@ dist/tandem: go.mod go.sum $(shell fd -g '*.go' .)
 
 release: .goreleaser.yml go.mod go.sum $(shell fd -g '*.go' .) ## Build and test release binaries
 	@goreleaser release --snapshot --rm-dist
+	@echo "Run 'git tag <tag-id>" and then 'git push --tags' to publish the release"
 
 help: ## Show this help
 	@echo "\nSpecify a command. The choices are:\n"

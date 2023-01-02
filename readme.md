@@ -29,7 +29,7 @@ If you have Go installed, you can install from the source with:
 go install github.com/rosszurowski/tandem@latest
 ```
 
-In a Makefile, copy this snippet to download a local copy to your project. Change the `.cache` path as needed, and make sure it is added to your .gitignore file.
+In a Makefile, use this snippet to fetch a local copy for your project. Change the `.cache` path as needed, and add it to your `.gitignore`.
 
 ```makefile
 dev: node_modules .cache/tandem
@@ -75,7 +75,7 @@ If your scripts are defined in `package.json`, you can reference them by using `
 $ tandem 'npm:dev:php' 'npm:dev:js' 'npm:dev:css'
 ```
 
-Support for wildcards like `tandem 'npm:dev:*'` will be added in a future update.
+Support for npm wildcards like `tandem 'npm:dev:*'` is tracked in https://github.com/rosszurowski/tandem/issues/2
 
 ## Motivation
 

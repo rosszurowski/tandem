@@ -24,4 +24,7 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This token will expire every once in a while. To regenerate it, make
+          # a new token with the "contents: write" scope for the
+          # rosszurowski/homebrew-tap repository, and it'll work again.
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}

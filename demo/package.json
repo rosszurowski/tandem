@@ -1,0 +1,8 @@
+{
+  "name": "tandem-demo",
+  "private": true,
+  "devDependencies": {
+    "esbuild": "^0.16.12",
+    "tailwindcss": "^3.2.4"
+  }
+}

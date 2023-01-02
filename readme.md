@@ -5,19 +5,19 @@
 <br />
 
 <div align="center">
-  <b>tandem</b> is a parallel task runner, meant to run concurrent dev<br /> servers that exit cleanly. Pairs great with Makefiles!<br>
+  <b>tandem</b> is a task runner for parallel dev servers.<br />Small, fast, and pairs great with Makefiles!<br>
 </div>
 
 ## Features
 
 - Small, fast, static binary.
-- Cleanly shuts down each command if one fails! No more processes clinging to ports.
+- Shuts down each command if one fails. No more processes clinging to ports.
 - Supports running npm scripts and binaries.
-- Shows labels for each command, to help keep track of interleaved output.
+- Labels output for each command.
 
 ## Demo
 
-![A demo of using the tandem CLI](.github/demo.gif)
+![A screencast demo of using the tandem CLI.](.github/demo.gif)
 
 ## Installation
 

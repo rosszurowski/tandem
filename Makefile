@@ -1,5 +1,8 @@
 build: dist/tandem
 
+.github/demo.gif: demo/tandem.tape
+	@cd demo && vhs tandem.tape
+
 dist/tandem: go.mod go.sum $(shell fd -g '*.go' .)
 	@go build -o dist/tandem .
 

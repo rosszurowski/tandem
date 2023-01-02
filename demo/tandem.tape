@@ -1,3 +1,5 @@
+Output ../.github/demo.gif
+
 Set Shell fish
 Set Padding 40
 Set Framerate 60

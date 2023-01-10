@@ -73,7 +73,11 @@ If your scripts are defined in `package.json`, you can reference them by using `
 $ tandem 'npm:dev:php' 'npm:dev:js' 'npm:dev:css'
 ```
 
-Support for npm wildcards like `tandem 'npm:dev:*'` is tracked in https://github.com/rosszurowski/tandem/issues/2
+Wildcard rules like `npm:dev:*` are also supported as a shortcut. This line is equivalent to the above:
+
+```shell
+$ tandem 'npm:dev:*'
+```
 
 ### Using in Makefiles
 

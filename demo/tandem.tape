@@ -2,7 +2,6 @@ Output ../.github/demo.gif
 
 Set Shell fish
 Set Padding 40
-Set Framerate 60
 Set Theme "nord"
 
 Require php
@@ -19,26 +18,26 @@ Enter
 Type@1ms `./update.sh 11 'console.log("my-8 pl-2 pr-5 bg-red-500 text-white")' &; disown`
 Enter
 Ctrl+L
-Sleep 0.2s
+Sleep 0.5s
 Show
 
 Sleep 1s
 Type "tandem \"
 Enter
 Sleep 0.15s
-Type@24ms "'php -S localhost:8000' \"
+Type@30ms "'php -S localhost:8000' \"
 Enter
 Sleep 0.1s
-Type@18ms "'esbuild src/*.ts --bundle --outdir=dist --watch' \"
+Type@24ms "'esbuild src/*.ts --bundle --outdir=dist --watch' \"
 Enter
 Sleep 0.1s
-Type@16ms "'tailwindcss -i src/index.css -o dist/index.css --watch'"
+Type@20ms "'tailwind -i src/index.css -o dist/index.css --watch'"
 Sleep 0.5s
 Enter
 
 Sleep 7s
 Ctrl+C
-Sleep 3s
+Sleep 4s
 Ctrl+L
 
 Hide

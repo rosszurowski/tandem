@@ -16,11 +16,6 @@ import (
 
 var colors = []int{2, 3, 4, 5, 6, 42, 130, 103, 129, 108}
 
-type command struct {
-	name string
-	cmd  string
-}
-
 type processManager struct {
 	output      *multiOutput
 	procs       []*process
@@ -45,61 +40,9 @@ func newProcessManager(root string, timeout int, cmds []string, silent bool) (*p
 		injectPathVal(env, nodeBin)
 	}
 
-	var namedCmds []command
-	var npmCommandIdx []int // indexes of commands with 'npm:' prefix
-	for i, cmd := range cmds {
-		name := filterCmdName(cmd)
-		if name == "" {
-			name = "cmd"
-		}
-		if strings.HasPrefix(name, "npm:") {
-			npmCommandIdx = append(npmCommandIdx, i)
-		}
-		namedCmds = append(namedCmds, command{
-			name: name,
-			cmd:  cmd,
-		})
-	}
-
-	// For commands prefixed with 'npm:', read the command contents from
-	// the package.json file. Error on any missing commands.
-	if len(npmCommandIdx) > 0 {
-		scripts, err := parseNpmScripts(root)
-		if err != nil {
-			return nil, err
-		}
-		var missingCommands []string
-		for _, idx := range npmCommandIdx {
-			npmCmd := namedCmds[idx]
-			npmCmd.name = strings.TrimPrefix(npmCmd.name, "npm:")
-			s, ok := scripts[npmCmd.name]
-			if !ok {
-				missingCommands = append(missingCommands, npmCmd.name)
-				continue
-			}
-			npmCmd.cmd = s
-			namedCmds[idx] = npmCmd
-		}
-		if len(missingCommands) > 0 {
-			return nil, fmt.Errorf("npm scripts %q missing from package.json", strings.Join(missingCommands, ","))
-		}
-	}
-
-	// If there are multiple processes with the same name, append a number to each
-	// one, so we can distinguish them.
-	namesMap := map[string][]int{} // name -> indexes of procs with name
-	for i, cmd := range namedCmds {
-		name := cmd.name
-		namesMap[name] = append(namesMap[name], i)
-	}
-	for name, idxs := range namesMap {
-		if len(idxs) > 1 {
-			for i, idx := range idxs {
-				cmd := namedCmds[idx]
-				cmd.name = fmt.Sprintf("%s.%d", name, i+1)
-				namedCmds[idx] = cmd
-			}
-		}
+	namedCmds, err := parseCommands(root, cmds)
+	if err != nil {
+		return nil, err
 	}
 
 	for i, cmd := range namedCmds {
@@ -258,21 +201,114 @@ func (p *process) Kill() {
 	}
 }
 
+type command struct {
+	name string
+	cmd  string
+}
+
+func parseCommands(root string, cmds []string) ([]command, error) {
+	var result []command
+	var npmCommands []string
+	for _, cmd := range cmds {
+		name := filterCmdName(cmd)
+		if name == "" {
+			name = "cmd"
+		}
+		if strings.HasPrefix(name, "npm:") {
+			npmCommands = append(npmCommands, cmd)
+			continue
+		}
+		result = append(result, command{
+			name: name,
+			cmd:  cmd,
+		})
+	}
+
+	// For commands prefixed with 'npm:', read the command contents from
+	// the package.json file. Error on any missing commands.
+	if len(npmCommands) > 0 {
+		b, err := os.ReadFile(filepath.Join(root, "package.json"))
+		if err != nil {
+			return nil, fmt.Errorf("reading package.json: %v", err)
+		}
+		scripts, err := parseNpmScripts(b, npmCommands)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, scripts...)
+	}
+
+	// If there are multiple processes with the same name, append a number to each
+	// one, so we can distinguish them.
+	namesMap := map[string][]int{} // name -> indexes of procs with name
+	for i, cmd := range result {
+		name := cmd.name
+		namesMap[name] = append(namesMap[name], i)
+	}
+	for name, idxs := range namesMap {
+		if len(idxs) > 1 {
+			for i, idx := range idxs {
+				cmd := result[idx]
+				cmd.name = fmt.Sprintf("%s.%d", name, i+1)
+				result[idx] = cmd
+			}
+		}
+	}
+	return result, nil
+}
+
 type packageJSON struct {
 	Scripts map[string]string `json:"scripts"`
 }
 
-func parseNpmScripts(root string) (map[string]string, error) {
-	path := filepath.Join(root, "package.json")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("reading package.json: %v", err)
-	}
-	var p packageJSON
-	if err := json.Unmarshal(b, &p); err != nil {
+// parseNpmScripts parses a package.json file and set of command strings, and
+// returns a set of named commands, including the paths to run for each command.
+func parseNpmScripts(b []byte, cmds []string) ([]command, error) {
+	var pkg packageJSON
+	if err := json.Unmarshal(b, &pkg); err != nil {
 		return nil, fmt.Errorf("parsing package.json: %v", err)
 	}
-	return p.Scripts, nil
+
+	var result []command
+	var missingCommands []string
+	for _, cmd := range cmds {
+		scriptName := strings.TrimPrefix(cmd, "npm:")
+		if s, ok := pkg.Scripts[scriptName]; ok {
+			// Exact match? Add it to the list.
+			result = append(result, command{
+				name: scriptName,
+				cmd:  s,
+			})
+			continue
+		}
+		if !strings.Contains(scriptName, "*") {
+			missingCommands = append(missingCommands, scriptName)
+			continue
+		}
+		// Check if scriptName wildcard matches scriptName
+		hasMatch := false
+		for name, pcmd := range pkg.Scripts {
+			if !wildcardMatch(scriptName, name) {
+				continue
+			}
+			result = append(result, command{
+				name: name,
+				cmd:  pcmd,
+			})
+			hasMatch = true
+		}
+		if !hasMatch {
+			return nil, fmt.Errorf("no npm scripts matching %q found in package.json", scriptName)
+		}
+	}
+	if len(missingCommands) > 0 {
+		noun := "script"
+		if len(missingCommands) != 1 {
+			noun = "scripts"
+		}
+		return nil, fmt.Errorf("no npm %s named %q found in package.json", noun, strings.Join(missingCommands, ","))
+	}
+	return result, nil
 }
 
 // injectPathVal injects a value into the start of a PATH environment variable.
@@ -299,4 +335,24 @@ func filterCmdName(cmd string) string {
 		return ""
 	}
 	return name
+}
+
+// wildcardMatch takes a pattern that optionally includes a * character, and
+// returns whether or not string s matches that wildcard. The matching currently
+// only supports one wildcard and prefix/suffix matching.
+func wildcardMatch(pattern, s string) bool {
+	parts := strings.Split(pattern, "*")
+	if len(parts) == 1 {
+		return strings.EqualFold(pattern, s)
+	}
+	if len(parts) > 2 {
+		return false
+	}
+	if parts[0] == "" {
+		return strings.HasSuffix(s, parts[1])
+	}
+	if parts[1] == "" {
+		return strings.HasPrefix(s, parts[0])
+	}
+	return strings.HasPrefix(s, parts[0]) && strings.HasSuffix(s, parts[1])
 }

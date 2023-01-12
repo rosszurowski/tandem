@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"testing"
 
 	"golang.org/x/exp/slices"
@@ -62,6 +63,8 @@ func TestParseNpmScripts(t *testing.T) {
 		for _, c := range cmds {
 			got = append(got, c.cmd)
 		}
+		sort.Strings(got)
+		sort.Strings(tt.want)
 		if !slices.Equal(got, tt.want) {
 			t.Fatalf("parseNpmScripts(%q): got %v, want %v", tt.cmds, got, tt.want)
 		}

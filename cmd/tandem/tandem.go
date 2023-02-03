@@ -104,9 +104,20 @@ var (
   {{end}}{{end}}
   %s
 
-    $ {{.Name}} 'sleep 5 && echo "hello"' 'sleep 2 && echo "world"'
+    %s
 
-    $ {{.Name}} -t 0 'sleep 5 && echo "hello"' 'sleep 2 && echo "world"'
+    $ {{.Name}} 'command-a "arg1"' 'command-b "arg1" "arg2'
 
-`, ansi.Bold(name), ansi.Dim("Commands:"), ansi.Dim("Options:"), ansi.Dim("Examples:"))
+    %s
+
+    $ {{.Name}} 'npm:build:*'
+
+`,
+		ansi.Bold(name),
+		ansi.Dim("Commands:"),
+		ansi.Dim("Options:"),
+		ansi.Dim("Examples:"),
+		ansi.Dim("Run two commands in tandem:"),
+		ansi.Dim("Run npm scripts starting with 'build:' in tandem"),
+	)
 )

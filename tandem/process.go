@@ -1,4 +1,6 @@
-package main
+// Package tandem provides a process manager utility for running multiple
+// processes and combining their output.
+package tandem
 
 import (
 	"encoding/json"
@@ -12,11 +14,15 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/rosszurowski/tandem/ansi"
 )
 
 var colors = []int{2, 3, 4, 5, 6, 42, 130, 103, 129, 108}
 
-type processManager struct {
+// ProcessManager manages a set of processes, combining their output and exiting
+// all of them gracefully when one of them exits.
+type ProcessManager struct {
 	output      *multiOutput
 	procs       []*process
 	procWg      sync.WaitGroup
@@ -26,21 +32,35 @@ type processManager struct {
 	silent      bool
 }
 
-func newProcessManager(root string, timeout int, cmds []string, silent bool) (*processManager, error) {
-	pm := &processManager{
+// Config is the configuration for a process manager.
+type Config struct {
+	Cmds    []string // Shell commands to run
+	Root    string   // Root directory for commands to run from
+	Timeout int      // Timeout in seconds for commands to exit gracefully before being killed. Defaults to 0.
+	Silent  bool     // Whether to silence process management messages like "Starting..."
+}
+
+// New creates a new process manager with the given configuration.
+func New(cfg Config) (*ProcessManager, error) {
+	root, err := filepath.Abs(cfg.Root)
+	if err != nil {
+		return nil, fmt.Errorf("could not get absolute path for directory: %v", err)
+	}
+
+	pm := &ProcessManager{
 		output:  &multiOutput{printProcName: true},
 		procs:   make([]*process, 0),
-		timeout: time.Duration(timeout) * time.Second,
-		silent:  silent,
+		timeout: time.Duration(cfg.Timeout) * time.Second,
+		silent:  cfg.Silent,
 	}
 
 	env := os.Environ()
-	nodeBin := filepath.Join(root, "node_modules/.bin")
+	nodeBin := filepath.Join(cfg.Root, "node_modules/.bin")
 	if fi, err := os.Stat(nodeBin); err == nil && fi.IsDir() {
 		injectPathVal(env, nodeBin)
 	}
 
-	namedCmds, err := parseCommands(root, cmds)
+	namedCmds, err := parseCommands(root, cfg.Cmds)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +79,8 @@ func newProcessManager(root string, timeout int, cmds []string, silent bool) (*p
 	return pm, nil
 }
 
-func (pm *processManager) Run() {
+// Run starts all processes and waits for them to exit or be interrupted.
+func (pm *ProcessManager) Run() {
 	pm.done = make(chan bool, len(pm.procs))
 	pm.interrupted = make(chan os.Signal)
 	signal.Notify(pm.interrupted, syscall.SIGINT, syscall.SIGTERM)
@@ -70,7 +91,7 @@ func (pm *processManager) Run() {
 	pm.procWg.Wait()
 }
 
-func (pm *processManager) runProcess(proc *process) {
+func (pm *ProcessManager) runProcess(proc *process) {
 	pm.procWg.Add(1)
 	go func() {
 		defer pm.procWg.Done()
@@ -79,21 +100,21 @@ func (pm *processManager) runProcess(proc *process) {
 	}()
 }
 
-func (pm *processManager) waitForDoneOrInterrupt() {
+func (pm *ProcessManager) waitForDoneOrInterrupt() {
 	select {
 	case <-pm.done:
 	case <-pm.interrupted:
 	}
 }
 
-func (pm *processManager) waitForTimeoutOrInterrupt() {
+func (pm *ProcessManager) waitForTimeoutOrInterrupt() {
 	select {
 	case <-time.After(pm.timeout):
 	case <-pm.interrupted:
 	}
 }
 
-func (pm *processManager) waitForExit() {
+func (pm *ProcessManager) waitForExit() {
 	pm.waitForDoneOrInterrupt()
 	for _, proc := range pm.procs {
 		go proc.Interrupt()
@@ -151,6 +172,10 @@ func (p *process) signal(sig os.Signal) {
 	}
 }
 
+func (p *process) writeDebug(s string) {
+	p.writeLine([]byte(ansi.Dim(s)))
+}
+
 func (p *process) writeLine(b []byte) {
 	p.output.WriteLine(p, b)
 }
@@ -163,7 +188,7 @@ func (p *process) Run() {
 	p.output.PipeOutput(p)
 	defer p.output.ClosePipe(p)
 	if !p.silent {
-		p.writeLine([]byte(dim("Starting...")))
+		p.writeDebug("Starting...")
 	}
 	if err := p.Cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
@@ -171,7 +196,7 @@ func (p *process) Run() {
 			if exitErr.ExitCode() == 1 {
 				p.writeErr(err)
 			} else {
-				p.writeLine([]byte(dim(fmt.Sprintf("exit status %d", exitErr.ExitCode()))))
+				p.writeLine([]byte(ansi.Dim(fmt.Sprintf("exit status %d", exitErr.ExitCode()))))
 			}
 			return
 		}
@@ -179,14 +204,14 @@ func (p *process) Run() {
 		return
 	}
 	if !p.silent {
-		p.writeLine([]byte(dim("Process exited")))
+		p.writeDebug("Process exited")
 	}
 }
 
 func (p *process) Interrupt() {
 	if p.Running() {
 		if !p.silent {
-			p.writeLine([]byte(dim("Interrupting...")))
+			p.writeDebug("Interrupting...")
 		}
 		p.signal(syscall.SIGINT)
 	}
@@ -195,7 +220,7 @@ func (p *process) Interrupt() {
 func (p *process) Kill() {
 	if p.Running() {
 		if !p.silent {
-			p.writeLine([]byte(dim("Killing...")))
+			p.writeDebug("Killing...")
 		}
 		p.signal(syscall.SIGKILL)
 	}

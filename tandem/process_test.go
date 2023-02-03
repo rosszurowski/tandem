@@ -1,11 +1,39 @@
-package main
+package tandem
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"sort"
+	"strings"
 	"testing"
 
+	"github.com/rosszurowski/tandem/ansi"
 	"golang.org/x/exp/slices"
 )
+
+func TestGoAPI(t *testing.T) {
+	ansi.NoColor = true
+	out, err := captureStdout(func() {
+		pm, err := New(Config{
+			Cmds:   []string{"echo 'hello' && sleep 0.15", "echo 'world' && sleep 0.15"},
+			Silent: true,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		pm.Run()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hasCmd1 := strings.Contains(out, "echo.1  hello")
+	hasCmd2 := strings.Contains(out, "echo.2  world")
+	if !hasCmd1 || !hasCmd2 {
+		t.Fatalf("expected output to contain both commands, got %q", out)
+	}
+}
 
 func TestParseNpmScripts(t *testing.T) {
 	pkg := []byte(`
@@ -94,4 +122,19 @@ func TestWildcardMatch(t *testing.T) {
 			t.Errorf("wildcardMatch(%q, %q) = %v, want %v", tt.pattern, tt.input, got, tt.want)
 		}
 	}
+}
+
+func captureStdout(f func()) (string, error) {
+	stdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		return "", err
+	}
+	os.Stdout = w
+	f()
+	w.Close()
+	os.Stdout = stdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	return buf.String(), nil
 }

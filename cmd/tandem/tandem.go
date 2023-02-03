@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 
+	"github.com/rosszurowski/tandem/ansi"
+	"github.com/rosszurowski/tandem/tandem"
 	"github.com/urfave/cli/v2"
 )
 
@@ -60,17 +61,12 @@ func main() {
 			if args.Len() < 1 {
 				return ErrNoCommands
 			}
-
-			root, err := filepath.Abs(c.String("directory"))
-			if err != nil {
-				return fmt.Errorf("could not get absolute path for directory: %v", err)
-			}
-			pm, err := newProcessManager(
-				root,
-				c.Int("timeout"),
-				args.Slice(),
-				c.Bool("silent"),
-			)
+			pm, err := tandem.New(tandem.Config{
+				Cmds:    args.Slice(),
+				Root:    c.String("directory"),
+				Timeout: c.Int("timeout"),
+				Silent:  c.Bool("silent"),
+			})
 			if err != nil {
 				return err
 			}
@@ -85,9 +81,9 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		if errors.Is(err, ErrNoCommands) {
-			fmt.Fprintf(os.Stderr, "%s %v\n", red("Error:"), err)
+			fmt.Fprintf(os.Stderr, "%s %v\n", ansi.Red("Error:"), err)
 		} else {
-			fmt.Fprintf(os.Stderr, "%s %v\n", red("Error:"), err)
+			fmt.Fprintf(os.Stderr, "%s %v\n", ansi.Red("Error:"), err)
 		}
 		os.Exit(1)
 	}
@@ -112,5 +108,5 @@ var (
 
     $ {{.Name}} -t 0 'sleep 5 && echo "hello"' 'sleep 2 && echo "world"'
 
-`, bold(name), dim("Commands:"), dim("Options:"), dim("Examples:"))
+`, ansi.Bold(name), ansi.Dim("Commands:"), ansi.Dim("Options:"), ansi.Dim("Examples:"))
 )

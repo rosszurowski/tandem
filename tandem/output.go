@@ -1,4 +1,4 @@
-package main
+package tandem
 
 import (
 	"bufio"
@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/pkg/term/termios"
+	"github.com/rosszurowski/tandem/ansi"
 )
 
 type ptyPipe struct {
@@ -73,15 +74,14 @@ func (m *multiOutput) WriteLine(proc *process, p []byte) {
 	var buf bytes.Buffer
 
 	if m.printProcName {
-		color := fmt.Sprintf("\033[0;38;5;%vm", proc.Color)
-		buf.WriteString(color)
+		buf.WriteString(ansi.ColorStart(proc.Color))
 		if m.printProcName {
 			buf.WriteString(proc.Name)
 			for i := len(proc.Name); i <= m.maxNameLength; i++ {
 				buf.WriteByte(' ')
 			}
 		}
-		buf.WriteString("\033[0m ")
+		buf.WriteString(ansi.ColorEnd() + " ")
 	}
 
 	// We trim the "/bin/sh: " prefix from the output of the command
@@ -96,7 +96,7 @@ func (m *multiOutput) WriteLine(proc *process, p []byte) {
 }
 
 func (m *multiOutput) WriteErr(proc *process, err error) {
-	m.WriteLine(proc, []byte(red(err.Error())))
+	m.WriteLine(proc, []byte(ansi.Red(err.Error())))
 }
 
 func scanLines(r io.Reader, callback func([]byte) bool) error {
@@ -137,23 +137,7 @@ func fatalOnErr(err error) {
 }
 
 func fatal(i ...interface{}) {
-	fmt.Fprint(os.Stderr, name+": ")
+	fmt.Fprint(os.Stderr, "tandem: ")
 	fmt.Fprintln(os.Stderr, i...)
 	os.Exit(1)
-}
-
-func red(s string) string {
-	return "\033[0;31m" + s + "\033[0m"
-}
-
-func gray(s string) string {
-	return "\033[0;38;5;8m" + s + "\033[0m"
-}
-
-func dim(s string) string {
-	return "\033[0;2m" + s + "\033[0m"
-}
-
-func bold(s string) string {
-	return "\033[1m" + s + "\033[0m"
 }

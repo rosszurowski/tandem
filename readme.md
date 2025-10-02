@@ -30,7 +30,7 @@ brew install rosszurowski/tap/tandem
 If you have Go installed, you can install from the source with:
 
 ```shell
-go install github.com/rosszurowski/tandem@latest
+go install github.com/rosszurowski/tandem/cmd/tandem@latest
 ```
 
 If you're using tandem from a Makefile, [this snippet](#using-in-makefiles) shows how to download a locally cached copy.
